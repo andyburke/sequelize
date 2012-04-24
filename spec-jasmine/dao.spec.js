@@ -1,15 +1,21 @@
 var config    = require("./config/config")
   , Sequelize = require("../index")
-  , dialects  = ['sqlite', 'mysql']
+  , dialects  = ['sqlite', 'mysql', 'postgres']
 
 describe('DAO', function() {
   dialects.forEach(function(dialect) {
     describe('with dialect "' + dialect + '"', function() {
       var User      = null
-        , sequelize = new Sequelize(config.database, config.username, config.password, {
-          logging: false,
-          dialect: dialect
-        })
+        , sequelize = new Sequelize(
+            config[dialect].database,
+            config[dialect].username,
+            config[dialect].password,
+            {
+              logging: false,
+              dialect: dialect,
+              port: config[dialect].port
+            }
+          )
         , Helpers   = new (require("./config/helpers"))(sequelize)
 
       var setup = function() {
@@ -358,9 +364,7 @@ describe('DAO', function() {
             setTimeout(function() {
               user      = User.build({ username: 'user' })
               updatedAt = user.updatedAt
-
               expect(updatedAt.getTime()).toBeGreaterThan(now)
-
               done()
             }, 10)
           })
@@ -471,7 +475,7 @@ describe('DAO', function() {
             }).success(function(user) {
               var emitter = user.updateAttributes({name: 'foobar'})
               emitter.success(function() {
-                expect(emitter.query.sql).toMatch(/WHERE `identifier`..identifier./)
+                expect(emitter.query.sql).toMatch(/WHERE [`"]identifier[`"]..identifier./)
                 done()
               })
             })
@@ -492,6 +496,61 @@ describe('DAO', function() {
           Helpers.async(function(done) {
             var user = User.build({ username: 'foo' })
             expect(user.values).toEqual({ username: "foo", id: null })
+            done()
+          })
+        })
+      })
+
+      describe('toJSON', function() {
+        it('returns an object containing all values', function() {
+          var self = this
+
+          var User = sequelize.define('User', {
+            username: Sequelize.STRING, age: Sequelize.INTEGER, isAdmin: Sequelize.BOOLEAN
+          }, { timestamps: false, logging: false })
+
+          Helpers.async(function(done) {
+            User.sync({ force: true }).success(done)
+          })
+
+          Helpers.async(function(done) {
+            var user = User.build({ username: 'test.user', age: 99, isAdmin: true })
+            expect(user.toJSON()).toEqual({ username: 'test.user', age: 99, isAdmin: true, id: null })
+            done()
+          })
+        })
+
+        it('returns a response that can be stringified', function() {
+          var self = this
+
+          var User = sequelize.define('User', {
+            username: Sequelize.STRING, age: Sequelize.INTEGER, isAdmin: Sequelize.BOOLEAN
+          }, { timestamps: false, logging: false })
+
+          Helpers.async(function(done) {
+            User.sync({ force: true }).success(done)
+          })
+
+          Helpers.async(function(done) {
+            var user = User.build({ username: 'test.user', age: 99, isAdmin: true })
+            expect(JSON.stringify(user)).toEqual('{"username":"test.user","age":99,"isAdmin":true,"id":null}')
+            done()
+          })
+        })
+
+        it('returns a response that can be stringified and then parsed', function() {
+          var self = this
+          var User = sequelize.define('User', {
+            username: Sequelize.STRING, age: Sequelize.INTEGER, isAdmin: Sequelize.BOOLEAN
+          }, { timestamps: false, logging: false })
+
+          Helpers.async(function(done) {
+            User.sync({ force: true }).success(done)
+          })
+
+          Helpers.async(function(done) {
+            var user = User.build({ username: 'test.user', age: 99, isAdmin: true })
+            expect(JSON.parse(JSON.stringify(user))).toEqual({ username: 'test.user', age: 99, isAdmin: true, id: null })
             done()
           })
         })

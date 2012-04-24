@@ -24,6 +24,7 @@ describe('DAOFactory', function() {
           name: Sequelize.STRING,
           bio: Sequelize.TEXT
         })
+
         Helpers.sync()
       })
 
@@ -73,6 +74,48 @@ describe('DAOFactory', function() {
               options: options
             }, function(people) {
               expect(people[0].options).toEqual(options)
+              done()
+            })
+          })
+        })
+
+        it('should allow the creation of an object with a boolean (true) as attribute', function() {
+          var Person = sequelize.define('Person', {
+            name: Sequelize.STRING,
+            has_swag: Sequelize.BOOLEAN
+          })
+
+          Helpers.async(function(done) {
+            Person.sync({force: true}).success(done)
+          })
+
+          Helpers.async(function(done) {
+            Helpers.Factories.DAO('Person', {
+              name: 'John Doe',
+              has_swag: true
+            }, function(people) {
+              expect(people[0].has_swag).toBeTruthy();
+              done()
+            })
+          })
+        })
+
+        it('should allow the creation of an object with a boolean (false) as attribute', function() {
+          var Person = sequelize.define('Person', {
+            name: Sequelize.STRING,
+            has_swag: Sequelize.BOOLEAN
+          })
+
+          Helpers.async(function(done) {
+            Person.sync({force: true}).success(done)
+          })
+
+          Helpers.async(function(done) {
+            Helpers.Factories.DAO('Person', {
+              name: 'John Doe',
+              has_swag: false
+            }, function(people) {
+              expect(people[0].has_swag).toBeFalsy();
               done()
             })
           })
